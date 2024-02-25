@@ -8,12 +8,13 @@ import java.util.Scanner;
 
 public class UserView {
     private final UserController userController;
+    private Object delete;
 
     public UserView(UserController userController) {
         this.userController = userController;
     }
 
-    public void run(){
+    public void run() {
         Commands com;
 
         while (true) {
@@ -25,6 +26,8 @@ public class UserView {
                     User u = createUser();
                     userController.saveUser(u);
                     break;
+                case NONE:
+                    break;
                 case READ:
                     String id = prompt("Идентификатор пользователя: ");
                     try {
@@ -35,9 +38,18 @@ public class UserView {
                         throw new RuntimeException(e);
                     }
                     break;
+                case LIST:
+                    System.out.println(userController.readAll());
+                    break;
                 case UPDATE:
                     String userId = prompt("Enter user id: ");
                     userController.updateUser(userId, createUser());
+                    break;
+                case DELETE:
+                    String UserId = prompt("Enter user id: ");
+                    userController.deleteUser(UserId, createUser());
+                    break;
+
             }
         }
     }
