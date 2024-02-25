@@ -1,7 +1,5 @@
 package notebook.model.repository;
-
 import notebook.model.User;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -10,5 +8,9 @@ public interface GBRepository {
     User create(User user);
     Optional<User> findById(Long id);
     Optional<User> update(Long userId, User update);
-    boolean delete(Long id);
+    Optional<User> delete(Long userId, User delete);
+    List<String> readAll();
+
+    void saveAll(List<String> data);
+    void write(List<User> users);
 }

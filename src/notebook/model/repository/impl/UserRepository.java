@@ -1,26 +1,61 @@
 package notebook.model.repository.impl;
 
-import notebook.model.dao.impl.FileOperation;
 import notebook.util.mapper.impl.UserMapper;
 import notebook.model.User;
 import notebook.model.repository.GBRepository;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static notebook.util.DBConnector.DB_PATH;
+
 public class UserRepository implements GBRepository {
     private final UserMapper mapper;
-    private final FileOperation operation;
+    private final String fileName;
+    private GBRepository operation;
 
-    public UserRepository(FileOperation operation) {
+    public UserRepository(String fileName) {
         this.mapper = new UserMapper();
         this.operation = operation;
+        this.fileName = fileName;
+        try (FileWriter writer = new FileWriter(fileName, true)) {
+            writer.flush();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
     }
-
+    @Override
+    public List<String> readAll() {
+        List<String> lines = new ArrayList<>();
+        try {
+            File file = new File(DB_PATH);
+            //создаем объект FileReader для объекта File
+            FileReader fr = new FileReader(file);
+            //создаем BufferedReader с существующего FileReader для построчного считывания
+            BufferedReader reader = new BufferedReader(fr);
+            // считаем сначала первую строку
+            String line = reader.readLine();
+            if (line != null) {
+                lines.add(line);
+            }
+            while (line != null) {
+                // считываем остальные строки в цикле
+                line = reader.readLine();
+                if (line != null) {
+                    lines.add(line);
+                }
+            }
+            fr.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return lines;
+    }
     @Override
     public List<User> findAll() {
-        List<String> lines = operation.readAll();
+        List<String> lines = readAll();
         List<User> users = new ArrayList<>();
         for (String line : lines) {
             users.add(mapper.toOutput(line));
@@ -44,7 +79,6 @@ public class UserRepository implements GBRepository {
         write(users);
         return user;
     }
-
     @Override
     public Optional<User> findById(Long id) {
         return Optional.empty();
@@ -56,25 +90,52 @@ public class UserRepository implements GBRepository {
         User editUser = users.stream()
                 .filter(u -> u.getId()
                         .equals(userId))
-                .findFirst().orElseThrow(() -> new RuntimeException("User not found"));
-        editUser.setFirstName(update.getFirstName());
-        editUser.setLastName(update.getLastName());
-        editUser.setPhone(update.getPhone());
+                .findFirst().orElseThrow(() -> new RuntimeException("Пользователь не найден!"));
+        if(!update.getFirstName().isEmpty()) {
+            editUser.setFirstName(update.getFirstName());
+        }
+        if(!update.getLastName().isEmpty()) {
+            editUser.setLastName(update.getLastName());
+        }
+        if(!update.getPhone().isEmpty()) {
+            editUser.setPhone(update.getPhone());
+        }
         write(users);
         return Optional.of(update);
     }
 
     @Override
-    public boolean delete(Long id) {
-        return false;
+    public Optional<User> delete(Long userId, User delete) {
+        List<User> users = findAll();
+        User editUser = users.stream()
+                .filter(u -> u.getId()
+                        .equals(userId))
+                .findFirst().orElseThrow(() -> new RuntimeException("Пользователь не найден!"));
+        users.remove(editUser);
+        write(users);
+        return Optional.of(delete);
     }
-
-    private void write(List<User> users) {
+    @Override
+    public void saveAll(List<String> data) {
+        try (FileWriter writer = new FileWriter(DB_PATH, false)) {
+            for (String line : data) {
+                // запись всей строки
+                writer.write(line);
+                // запись по символам
+                writer.append('\n');
+            }
+            writer.flush();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+    @Override
+    public void write(List<User> users) {
         List<String> lines = new ArrayList<>();
         for (User u: users) {
             lines.add(mapper.toInput(u));
         }
-        operation.saveAll(lines);
+        saveAll(lines);
     }
 
 }
